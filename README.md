@@ -29,7 +29,7 @@ voicebridge
 
 ### 自动路由到 Cursor / Trae 当前聊天
 
-此功能仅在 macOS 上的 **Accessibility** 权限已经授予后可用，并且不会自动按 Enter。先将焦点放在 Cursor 或 Trae 的目标聊天输入框，然后通过全局快捷键开始录音；录音开始时 VoiceBridge 会记住当前前台应用，审阅确认后将文本粘贴回该应用。手动点击 VoiceBridge 主窗口的 **Record** 会把 VoiceBridge 本身记录为前台应用，不能用于此路由。
+此功能仅在 macOS 上的 **Accessibility** 权限已经授予后可用，并且不会自动按 Enter。先点击 Cursor 或 Trae **右侧聊天栏底部的输入框**，再通过全局快捷键开始录音；快捷键不会改变该输入焦点。审阅确认后 VoiceBridge 会返回该 IDE，并把文本粘贴到原本获得焦点的右侧聊天栏。手动点击 VoiceBridge 主窗口的 **Record** 会把 VoiceBridge 本身记录为前台应用，不能用于此路由。
 
 在 `~/.voicebridge/settings.json` 中明确开启（默认关闭）：
 

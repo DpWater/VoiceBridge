@@ -144,7 +144,7 @@ class MainWindow(QMainWindow):
             "clipboard": ClipboardTargetAdapter(),
             "cursor-current": GuiInputTargetAdapter(
                 "cursor-current",
-                "Cursor — recorded current conversation",
+                "Cursor — recorded right-side chat input",
                 "Cursor",
                 self.target_snapshot,
                 self.window_manager,
@@ -155,7 +155,7 @@ class MainWindow(QMainWindow):
             ),
             "trae-current": GuiInputTargetAdapter(
                 "trae-current",
-                "Trae — recorded current conversation",
+                "Trae — recorded right-side chat input",
                 "Trae",
                 self.target_snapshot,
                 self.window_manager,

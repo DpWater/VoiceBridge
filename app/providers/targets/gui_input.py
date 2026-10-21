@@ -7,7 +7,11 @@ from app.providers.base import TargetAdapter
 
 
 class GuiInputTargetAdapter(TargetAdapter):
-    """Paste into the pre-recorded active application without submitting it."""
+    """Paste into the chat input that had focus in the recorded application.
+
+    No click coordinates are used: the user chooses the right-side chat input
+    before starting. This avoids accidentally focusing the code editor.
+    """
 
     def __init__(
         self,
@@ -42,7 +46,7 @@ class GuiInputTargetAdapter(TargetAdapter):
         if actual != self.expected_application:
             raise RuntimeError(
                 f"The recorded target is {actual or 'unknown'}, not {self.expected_application}. "
-                "Focus the intended chat before starting the recording."
+                "Focus the intended right-side chat input before starting the recording."
             )
         if not self.window_manager.activate(self.snapshot):
             raise RuntimeError("Could not restore the recorded target window.")

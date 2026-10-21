@@ -89,9 +89,11 @@ class ReviewDialog(QDialog):
         self.context_preview.setPlainText(
             "No chat history is available through this target.\n\n"
             "VoiceBridge will not scrape private desktop conversations. For GUI tools it can only paste into the "
-            "verified application that was active before recording."
+            "right-side chat input that was focused before recording."
         )
-        self.target_status.setText(f"Recorded active application: {app}")
+        self.target_status.setText(
+            f"Recorded active application: {app}. Focus the IDE's right-side chat input before using the hotkey."
+        )
 
     def keyPressEvent(self, event) -> None:
         if event.key() == Qt.Key.Key_Return and event.modifiers() == Qt.KeyboardModifier.NoModifier:
