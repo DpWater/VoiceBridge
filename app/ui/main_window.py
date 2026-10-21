@@ -26,6 +26,7 @@ from app.services.hotkey import PynputToggleHotkey
 from app.services.workflow_controller import WorkflowController
 from app.ui.floating_recorder import FloatingRecorder
 from app.ui.review_dialog import ReviewDialog
+from app.ui.shortcut_settings_dialog import ShortcutSettingsDialog
 from app.ui.system_tray import SystemTray
 
 
@@ -64,17 +65,16 @@ class MainWindow(QMainWindow):
         self.status = QLabel("Ready. Click Record, then Stop to review before copying.")
         self.record_button = QPushButton("Record")
         self.record_button.clicked.connect(self._toggle_recording)
-        layout.addWidget(self.status); layout.addWidget(self.record_button); self.setCentralWidget(body)
+        self.shortcut_button = QPushButton("Shortcut settings…")
+        self.shortcut_button.clicked.connect(self._configure_shortcut)
+        layout.addWidget(self.status)
+        layout.addWidget(self.record_button)
+        layout.addWidget(self.shortcut_button)
+        self.setCentralWidget(body)
         self.tray = SystemTray(self, self._show_from_tray, self._start_from_tray, QApplication.quit)
         self.hotkey_backend = None
         if self.settings.hotkey_enabled:
-            try:
-                self.hotkey_backend = PynputToggleHotkey(
-                    self.settings.hotkey, lambda: self.signals.hotkey_pressed.emit()
-                )
-                self.hotkey_backend.start()
-            except RuntimeError as exc:
-                self.status.setText(f"Global hotkey unavailable: {exc}")
+            self._start_hotkey()
 
     def _show_from_tray(self) -> None:
         self.showNormal(); self.raise_(); self.activateWindow()
@@ -86,6 +86,32 @@ class MainWindow(QMainWindow):
     def _on_hotkey(self) -> None:
         if self.controller.workflow.state in {WorkflowState.IDLE, WorkflowState.RECORDING}:
             self._toggle_recording()
+
+    def _start_hotkey(self) -> None:
+        try:
+            self.hotkey_backend = PynputToggleHotkey(
+                self.settings.hotkey, lambda: self.signals.hotkey_pressed.emit()
+            )
+            self.hotkey_backend.start()
+            self.status.setText(f"Global shortcut enabled: {self.settings.hotkey}")
+        except RuntimeError as exc:
+            self.hotkey_backend = None
+            self.status.setText(f"Global shortcut unavailable: {exc}")
+
+    def _configure_shortcut(self) -> None:
+        dialog = ShortcutSettingsDialog(self.settings.hotkey, self.settings.hotkey_enabled, self)
+        if not dialog.exec():
+            return
+        if self.hotkey_backend:
+            self.hotkey_backend.stop()
+            self.hotkey_backend = None
+        self.settings.hotkey = dialog.hotkey
+        self.settings.hotkey_enabled = dialog.enabled.isChecked()
+        self.store.save(self.settings)
+        if self.settings.hotkey_enabled:
+            self._start_hotkey()
+        else:
+            self.status.setText("Global shortcut disabled")
 
     def _toggle_recording(self) -> None:
         if self.controller.workflow.state is WorkflowState.IDLE:
