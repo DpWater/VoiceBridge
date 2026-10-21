@@ -8,8 +8,11 @@ class FloatingRecorder(QWidget):
     def __init__(self) -> None:
         super().__init__(None, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        self.setObjectName("card")
         layout = QVBoxLayout(self)
-        self.label = QLabel("● Recording 00:00")
+        layout.setContentsMargins(16, 12, 16, 12)
+        self.label = QLabel("● 正在录音 00:00")
+        self.label.setObjectName("sectionTitle")
         self.level = QProgressBar(); self.level.setRange(0, 100); self.level.setValue(0)
         layout.addWidget(self.label); layout.addWidget(self.level)
         self._seconds = 0
@@ -23,4 +26,4 @@ class FloatingRecorder(QWidget):
 
     def _tick(self) -> None:
         self._seconds += 1
-        self.label.setText(f"● Recording {self._seconds // 60:02d}:{self._seconds % 60:02d}")
+        self.label.setText(f"● 正在录音 {self._seconds // 60:02d}:{self._seconds % 60:02d}")

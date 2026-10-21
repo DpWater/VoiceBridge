@@ -4,6 +4,8 @@ from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
     QApplication,
+    QFrame,
+    QHBoxLayout,
     QLabel,
     QMainWindow,
     QMessageBox,
@@ -60,16 +62,67 @@ class MainWindow(QMainWindow):
         self.signals.hotkey_pressed.connect(self._on_hotkey)
         self.floating = FloatingRecorder()
         self.setWindowTitle("VoiceBridge")
-        body = QWidget(); layout = QVBoxLayout(body)
-        layout.addWidget(QLabel("Local-first voice commands for coding agents"))
-        self.status = QLabel("Ready. Click Record, then Stop to review before copying.")
-        self.record_button = QPushButton("Record")
+        body = QWidget()
+        layout = QVBoxLayout(body)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        top_bar = QFrame()
+        top_bar.setObjectName("topBar")
+        top_layout = QHBoxLayout(top_bar)
+        top_layout.setContentsMargins(24, 14, 24, 14)
+        brand = QLabel("◉  VoiceBridge")
+        brand.setObjectName("brand")
+        self.connection_state = QLabel("● 本地优先 · 已就绪")
+        self.connection_state.setObjectName("statusChip")
+        top_layout.addWidget(brand)
+        top_layout.addStretch()
+        top_layout.addWidget(self.connection_state)
+        layout.addWidget(top_bar)
+
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(30, 30, 30, 30)
+        content_layout.setSpacing(12)
+        eyebrow = QLabel("VOICE → REVIEW → ROUTE")
+        eyebrow.setObjectName("eyebrow")
+        headline = QLabel("把语音发送到正在工作的对话")
+        headline.setObjectName("headline")
+        subtitle = QLabel("录音、整理、确认后，将文字安全粘贴回 Cursor 或 Trae 右侧聊天栏。不会自动提交。")
+        subtitle.setObjectName("subtitle")
+        subtitle.setWordWrap(True)
+        content_layout.addWidget(eyebrow)
+        content_layout.addWidget(headline)
+        content_layout.addWidget(subtitle)
+
+        card = QFrame()
+        card.setObjectName("card")
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(22, 20, 22, 20)
+        card_layout.setSpacing(12)
+        card_title = QLabel("快速录音")
+        card_title.setObjectName("sectionTitle")
+        card_note = QLabel("先把焦点放在 IDE 右侧聊天输入框，再使用全局快捷键；或者使用下方按钮进行本地录音测试。")
+        card_note.setObjectName("muted")
+        card_note.setWordWrap(True)
+        self.status = QLabel("等待录音。")
+        self.status.setObjectName("targetStatus")
+        self.status.setWordWrap(True)
+        self.record_button = QPushButton("开始录音")
+        self.record_button.setObjectName("record")
         self.record_button.clicked.connect(self._toggle_recording)
-        self.shortcut_button = QPushButton("Shortcut settings…")
+        self.shortcut_button = QPushButton("快捷键设置…")
         self.shortcut_button.clicked.connect(self._configure_shortcut)
-        layout.addWidget(self.status)
-        layout.addWidget(self.record_button)
-        layout.addWidget(self.shortcut_button)
+        actions = QHBoxLayout()
+        actions.addWidget(self.record_button)
+        actions.addWidget(self.shortcut_button)
+        actions.addStretch()
+        card_layout.addWidget(card_title)
+        card_layout.addWidget(card_note)
+        card_layout.addWidget(self.status)
+        card_layout.addLayout(actions)
+        content_layout.addWidget(card)
+        content_layout.addStretch()
+        layout.addWidget(content)
         self.setCentralWidget(body)
         self.tray = SystemTray(self, self._show_from_tray, self._start_from_tray, QApplication.quit)
         self.hotkey_backend = None
@@ -93,10 +146,10 @@ class MainWindow(QMainWindow):
                 self.settings.hotkey, lambda: self.signals.hotkey_pressed.emit()
             )
             self.hotkey_backend.start()
-            self.status.setText(f"Global shortcut enabled: {self.settings.hotkey}")
+            self.status.setText(f"全局快捷键已启用：{self.settings.hotkey}")
         except RuntimeError as exc:
             self.hotkey_backend = None
-            self.status.setText(f"Global shortcut unavailable: {exc}")
+            self.status.setText(f"全局快捷键不可用：{exc}")
 
     def _configure_shortcut(self) -> None:
         dialog = ShortcutSettingsDialog(self.settings.hotkey, self.settings.hotkey_enabled, self)
@@ -111,21 +164,23 @@ class MainWindow(QMainWindow):
         if self.settings.hotkey_enabled:
             self._start_hotkey()
         else:
-            self.status.setText("Global shortcut disabled")
+            self.status.setText("全局快捷键已关闭")
 
     def _toggle_recording(self) -> None:
         if self.controller.workflow.state is WorkflowState.IDLE:
             try:
                 self.target_snapshot = self.window_manager.capture_active_target()
                 self.controller.workflow.start(); self.recorder.start()
-                self.record_button.setText("Stop and transcribe"); self.status.setText("Recording…")
+                self.record_button.setText("停止并识别")
+                self.status.setText("正在录音…")
                 self.floating.show_recording()
             except Exception as exc:
                 self._error(str(exc))
         elif self.controller.workflow.state is WorkflowState.RECORDING:
             try:
                 audio = self.recorder.stop(); self.record_button.setEnabled(False)
-                self.status.setText("Transcribing…"); self.floating.show_status("Transcribing…")
+                self.status.setText("正在识别语音…")
+                self.floating.show_status("正在识别…")
                 self.controller.process(audio, self.settings.terminology,
                                         lambda raw, revised: self.signals.review_ready.emit(raw, revised),
                                         lambda message: self.signals.failed.emit(message), self.settings.use_enhancement)
@@ -133,7 +188,7 @@ class MainWindow(QMainWindow):
                 self._error(str(exc))
 
     def _review(self, original: str, revised: str) -> None:
-        self.floating.hide(); self.status.setText("Waiting for your review")
+        self.floating.hide(); self.status.setText("等待你确认发送目标与内容。")
         dialog = ReviewDialog(
             original,
             revised,
@@ -193,14 +248,14 @@ class MainWindow(QMainWindow):
         }
 
     def _error(self, message: str) -> None:
-        self.floating.hide(); self.status.setText(f"Error: {message}")
+        self.floating.hide(); self.status.setText(f"错误：{message}")
         QMessageBox.warning(self, "VoiceBridge", message)
         if self.controller.workflow.state not in {WorkflowState.IDLE, WorkflowState.FAILED}:
             self.controller.cancel()
         self._finish()
 
     def _finish(self) -> None:
-        self.record_button.setEnabled(True); self.record_button.setText("Record")
+        self.record_button.setEnabled(True); self.record_button.setText("开始录音")
         if self.controller.workflow.state in {WorkflowState.COMPLETED, WorkflowState.FAILED, WorkflowState.CANCELLED}:
             self.controller.workflow.reset()
 
