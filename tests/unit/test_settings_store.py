@@ -15,3 +15,7 @@ def test_unknown_keys_are_ignored(tmp_path) -> None:
     settings = SettingsStore(path).load()
     assert settings.asr_model == "tiny"
     assert not hasattr(settings, "api_key")
+
+
+def test_default_hotkey_is_a_macos_command_chord() -> None:
+    assert AppSettings().hotkey == "<cmd>+<shift>+k"

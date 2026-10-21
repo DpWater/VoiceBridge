@@ -36,13 +36,15 @@ voicebridge
 ```json
 {
   "hotkey_enabled": true,
-  "hotkey": "<ctrl>+<alt>+v",
+  "hotkey": "<cmd>+<shift>+k",
   "default_target": "cursor-current",
   "gui_paste_enabled": true
 }
 ```
 
 对 Trae，将 `default_target` 改为 `trae-current`。如果当前前台应用与所选目标不符、无法恢复窗口，或未获得辅助功能权限，发送会失败并保留审阅内容。VoiceBridge 不读取 Cursor 或 Trae 桌面聊天记录；公开 CLI 会话与 IDE GUI 对话是不同能力。
+
+`⌘⇧K` 可能与 IDE 自身快捷键冲突；如果 VoiceBridge 成功注册该全局组合键，它会优先接收该组合键。
 
 ## 已验证与待验证
 
