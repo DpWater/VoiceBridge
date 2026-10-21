@@ -18,4 +18,4 @@ def test_unknown_keys_are_ignored(tmp_path) -> None:
 
 
 def test_default_hotkey_is_a_macos_command_chord() -> None:
-    assert AppSettings().hotkey == "<cmd>+<ctrl>+<shift>+v"
+    assert AppSettings().hotkey == "<cmd>+<ctrl>+<shift>+9"

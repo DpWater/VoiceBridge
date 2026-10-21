@@ -76,7 +76,7 @@ class AppSettings:
     llm_base_url: str = "https://api.deepseek.com"
     llm_model: str = "deepseek-chat"
     llm_timeout_seconds: float = 30.0
-    hotkey: str = "<cmd>+<ctrl>+<shift>+v"
+    hotkey: str = "<cmd>+<ctrl>+<shift>+9"
     hotkey_enabled: bool = False
     recording_mode: Literal["push_to_talk", "toggle"] = "push_to_talk"
     max_recording_seconds: int = 120
