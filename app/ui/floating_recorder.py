@@ -1,0 +1,26 @@
+from __future__ import annotations
+
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtWidgets import QLabel, QProgressBar, QVBoxLayout, QWidget
+
+
+class FloatingRecorder(QWidget):
+    def __init__(self) -> None:
+        super().__init__(None, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        layout = QVBoxLayout(self)
+        self.label = QLabel("● Recording 00:00")
+        self.level = QProgressBar(); self.level.setRange(0, 100); self.level.setValue(0)
+        layout.addWidget(self.label); layout.addWidget(self.level)
+        self._seconds = 0
+        self._timer = QTimer(self); self._timer.timeout.connect(self._tick)
+
+    def show_recording(self) -> None:
+        self._seconds = 0; self._timer.start(1000); self.show()
+
+    def show_status(self, text: str) -> None:
+        self._timer.stop(); self.label.setText(text); self.show()
+
+    def _tick(self) -> None:
+        self._seconds += 1
+        self.label.setText(f"● Recording {self._seconds // 60:02d}:{self._seconds % 60:02d}")
