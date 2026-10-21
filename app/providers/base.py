@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from app.models.contracts import AudioBuffer, DispatchResult, EnhancementResult, TranscriptionResult
+from app.models.contracts import (
+    AudioBuffer,
+    Conversation,
+    DispatchResult,
+    EnhancementResult,
+    TranscriptionResult,
+)
 
 
 class SpeechRecognitionProvider(ABC):
@@ -27,6 +33,14 @@ class TextEnhancementProvider(ABC):
 
 class TargetAdapter(ABC):
     target_id: str
+
+    @property
+    def display_name(self) -> str:
+        return self.target_id
+
+    def discover_conversations(self) -> tuple[Conversation, ...]:
+        """Return only sessions exposed by a documented target interface."""
+        return ()
 
     @abstractmethod
     def dispatch(self, text: str) -> DispatchResult: ...

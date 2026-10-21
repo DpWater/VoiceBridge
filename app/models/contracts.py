@@ -56,6 +56,16 @@ class TargetSnapshot:
     process_id: int | None = None
 
 
+@dataclass(frozen=True)
+class Conversation:
+    """A session exposed by a target's documented interface."""
+
+    session_id: str
+    title: str
+    can_resume: bool = True
+    preview: tuple[str, ...] = ()
+
+
 @dataclass
 class AppSettings:
     asr_model: str = "small"
@@ -67,9 +77,11 @@ class AppSettings:
     llm_model: str = "deepseek-chat"
     llm_timeout_seconds: float = 30.0
     hotkey: str = "<ctrl>+<alt>+v"
+    hotkey_enabled: bool = False
     recording_mode: Literal["push_to_talk", "toggle"] = "push_to_talk"
     max_recording_seconds: int = 120
     default_target: str = "clipboard"
+    gui_paste_enabled: bool = False
     history_enabled: bool = True
     terminology: list[str] = field(default_factory=lambda: [
         "LangGraph", "LangChain", "FastAPI", "Redis", "checkpoint", "thread_id",

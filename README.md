@@ -27,13 +27,30 @@ voicebridge
 
 点击 **Record** 开始，再点击 **Stop and transcribe**。完成识别后可编辑文字并点击 **Copy**。如要使用 LLM，请通过系统钥匙串写入 `VoiceBridge / openai-compatible` 的密钥，再在 `~/.voicebridge/settings.json` 设置 `use_enhancement: true`（图形设置页仍在开发）。
 
+### 自动路由到 Cursor / Trae 当前聊天
+
+此功能仅在 macOS 上的 **Accessibility** 权限已经授予后可用，并且不会自动按 Enter。先将焦点放在 Cursor 或 Trae 的目标聊天输入框，然后通过全局快捷键开始录音；录音开始时 VoiceBridge 会记住当前前台应用，审阅确认后将文本粘贴回该应用。手动点击 VoiceBridge 主窗口的 **Record** 会把 VoiceBridge 本身记录为前台应用，不能用于此路由。
+
+在 `~/.voicebridge/settings.json` 中明确开启（默认关闭）：
+
+```json
+{
+  "hotkey_enabled": true,
+  "hotkey": "<ctrl>+<alt>+v",
+  "default_target": "cursor-current",
+  "gui_paste_enabled": true
+}
+```
+
+对 Trae，将 `default_target` 改为 `trae-current`。如果当前前台应用与所选目标不符、无法恢复窗口，或未获得辅助功能权限，发送会失败并保留审阅内容。VoiceBridge 不读取 Cursor 或 Trae 桌面聊天记录；公开 CLI 会话与 IDE GUI 对话是不同能力。
+
 ## 已验证与待验证
 
 `pytest` 中的 mock 自动化测试验证了状态机、配置、WAV 写入和 ASR→LLM 调度逻辑。真实 PySide6 启动、麦克风权限、模型下载/推理、钥匙串、托盘和全局快捷键必须在目标 macOS/Windows 设备上手工验证；它们没有被标记为已通过。
 
 ## 当前限制与路线图
 
-- MVP 的可靠发送方式是复制到剪贴板；目标窗口粘贴、粘贴并提交、Codex/Cursor/Claude CLI 都未实现。
+- 默认发送方式是复制到剪贴板。macOS 可显式启用 `gui_paste_enabled`，将文本粘贴到录音前已验证的 Cursor 或 Trae 活动窗口；不会按 Enter，也不会读取 GUI 对话历史。Codex/Cursor/Trae CLI 会话路由仍在开发。
 - 配置中的快捷键字段已持久化；现有可选 `pynput` 后端只适用于切换式组合键。按住说话需要平台权限和按键释放实现，尚未接入 UI。
 - 设置向导、模型下载进度、项目配置、SQLite 历史、多模型管理和 Windows 适配属于下一阶段。
 

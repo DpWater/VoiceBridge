@@ -2,7 +2,9 @@
 
 ## macOS
 
-VoiceBridge needs **Microphone** permission to record. The current MVP does not simulate paste or register a system-wide hotkey by default. Future global shortcut and GUI-input adapters will require the appropriate macOS Input Monitoring and/or Accessibility permission; the app must explain why before asking for either.
+VoiceBridge needs **Microphone** permission to record. GUI paste is disabled by default. When a user explicitly enables it, VoiceBridge needs **Accessibility** permission to restore the application that was active before recording and paste text with Command-V. It never presses Enter automatically.
+
+The GUI adapter does not scrape another application's private conversation content. Cursor, Trae, and other desktop chat applications must expose a stable, user-authorized API before their existing GUI history can be displayed or selected reliably. CLI sessions are a different capability from desktop GUI conversations.
 
 Run the application from a signed/notarized package for distribution. Development builds may be blocked by Gatekeeper and must be explicitly approved by the user.
 

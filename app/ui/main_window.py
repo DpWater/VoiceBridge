@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
     QApplication,
     QLabel,
@@ -15,10 +16,13 @@ from app.config.secrets import SecretStore
 from app.config.store import SettingsStore
 from app.core.state_machine import WorkflowState
 from app.models.contracts import AppSettings
+from app.platform.factory import get_window_manager
 from app.providers.asr.faster_whisper import FasterWhisperProvider
 from app.providers.llm.openai_compatible import OpenAICompatibleProvider
 from app.providers.targets.clipboard import ClipboardTargetAdapter
+from app.providers.targets.gui_input import GuiInputTargetAdapter
 from app.services.audio_recorder import AudioRecorder
+from app.services.hotkey import PynputToggleHotkey
 from app.services.workflow_controller import WorkflowController
 from app.ui.floating_recorder import FloatingRecorder
 from app.ui.review_dialog import ReviewDialog
@@ -28,6 +32,7 @@ from app.ui.system_tray import SystemTray
 class _Signals(QObject):
     review_ready = Signal(str, str)
     failed = Signal(str)
+    hotkey_pressed = Signal()
 
 
 class MainWindow(QMainWindow):
@@ -46,7 +51,12 @@ class MainWindow(QMainWindow):
             else None
         )
         self.controller = WorkflowController(asr, llm)
-        self.signals = _Signals(); self.signals.review_ready.connect(self._review); self.signals.failed.connect(self._error)
+        self.window_manager = get_window_manager()
+        self.target_snapshot = self.window_manager.capture_active_target()
+        self.signals = _Signals()
+        self.signals.review_ready.connect(self._review)
+        self.signals.failed.connect(self._error)
+        self.signals.hotkey_pressed.connect(self._on_hotkey)
         self.floating = FloatingRecorder()
         self.setWindowTitle("VoiceBridge")
         body = QWidget(); layout = QVBoxLayout(body)
@@ -56,6 +66,15 @@ class MainWindow(QMainWindow):
         self.record_button.clicked.connect(self._toggle_recording)
         layout.addWidget(self.status); layout.addWidget(self.record_button); self.setCentralWidget(body)
         self.tray = SystemTray(self, self._show_from_tray, self._start_from_tray, QApplication.quit)
+        self.hotkey_backend = None
+        if self.settings.hotkey_enabled:
+            try:
+                self.hotkey_backend = PynputToggleHotkey(
+                    self.settings.hotkey, lambda: self.signals.hotkey_pressed.emit()
+                )
+                self.hotkey_backend.start()
+            except RuntimeError as exc:
+                self.status.setText(f"Global hotkey unavailable: {exc}")
 
     def _show_from_tray(self) -> None:
         self.showNormal(); self.raise_(); self.activateWindow()
@@ -64,9 +83,14 @@ class MainWindow(QMainWindow):
         if self.controller.workflow.state is WorkflowState.IDLE:
             self._toggle_recording()
 
+    def _on_hotkey(self) -> None:
+        if self.controller.workflow.state in {WorkflowState.IDLE, WorkflowState.RECORDING}:
+            self._toggle_recording()
+
     def _toggle_recording(self) -> None:
         if self.controller.workflow.state is WorkflowState.IDLE:
             try:
+                self.target_snapshot = self.window_manager.capture_active_target()
                 self.controller.workflow.start(); self.recorder.start()
                 self.record_button.setText("Stop and transcribe"); self.status.setText("Recording…")
                 self.floating.show_recording()
@@ -84,11 +108,18 @@ class MainWindow(QMainWindow):
 
     def _review(self, original: str, revised: str) -> None:
         self.floating.hide(); self.status.setText("Waiting for your review")
-        dialog = ReviewDialog(original, revised, self)
+        dialog = ReviewDialog(
+            original,
+            revised,
+            self._build_targets(),
+            self.settings.default_target,
+            self.target_snapshot,
+            self,
+        )
         if dialog.exec() and dialog.text:
             try:
                 self.controller.workflow.transition(WorkflowState.DISPATCHING)
-                result = ClipboardTargetAdapter().dispatch(dialog.text)
+                result = dialog.target.dispatch(dialog.text)
                 self.controller.workflow.transition(WorkflowState.COMPLETED)
                 self.status.setText(result.message)
             except Exception as exc:
@@ -96,6 +127,44 @@ class MainWindow(QMainWindow):
         else:
             self.controller.cancel()
         self._finish()
+
+    def _copy_to_clipboard(self, text: str) -> None:
+        QGuiApplication.clipboard().setText(text)
+
+    @staticmethod
+    def _clipboard_text() -> str:
+        return QGuiApplication.clipboard().text()
+
+    @staticmethod
+    def _schedule(delay_ms: int, callback) -> None:
+        QTimer.singleShot(delay_ms, callback)
+
+    def _build_targets(self):
+        return {
+            "clipboard": ClipboardTargetAdapter(),
+            "cursor-current": GuiInputTargetAdapter(
+                "cursor-current",
+                "Cursor — recorded current conversation",
+                "Cursor",
+                self.target_snapshot,
+                self.window_manager,
+                self._copy_to_clipboard,
+                self._clipboard_text,
+                self._schedule,
+                self.settings.gui_paste_enabled,
+            ),
+            "trae-current": GuiInputTargetAdapter(
+                "trae-current",
+                "Trae — recorded current conversation",
+                "Trae",
+                self.target_snapshot,
+                self.window_manager,
+                self._copy_to_clipboard,
+                self._clipboard_text,
+                self._schedule,
+                self.settings.gui_paste_enabled,
+            ),
+        }
 
     def _error(self, message: str) -> None:
         self.floating.hide(); self.status.setText(f"Error: {message}")
@@ -110,4 +179,8 @@ class MainWindow(QMainWindow):
             self.controller.workflow.reset()
 
     def closeEvent(self, event) -> None:
-        self.recorder.cancel(); self.controller.shutdown(); super().closeEvent(event)
+        self.recorder.cancel()
+        if self.hotkey_backend:
+            self.hotkey_backend.stop()
+        self.controller.shutdown()
+        super().closeEvent(event)
