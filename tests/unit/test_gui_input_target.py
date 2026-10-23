@@ -60,3 +60,25 @@ def test_gui_target_activates_then_pastes_without_submit() -> None:
     scheduled[0]()
     assert copied == ["hello", "before"]
     assert result.status == "input"
+
+
+def test_active_cursor_target_accepts_any_recorded_application() -> None:
+    manager = FakeWindowManager()
+    copied, clipboard, scheduled = [], ["before"], []
+    target = GuiInputTargetAdapter(
+        "active-cursor",
+        "录音前的光标位置",
+        None,
+        TargetSnapshot("Claude"),
+        manager,
+        lambda text: (copied.append(text), clipboard.__setitem__(0, text)),
+        lambda: clipboard[0],
+        lambda _delay, callback: scheduled.append(callback),
+        True,
+    )
+
+    result = target.dispatch("hello")
+
+    assert manager.target == TargetSnapshot("Claude")
+    assert copied == ["hello"]
+    assert "Claude" in result.message

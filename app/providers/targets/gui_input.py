@@ -17,7 +17,7 @@ class GuiInputTargetAdapter(TargetAdapter):
         self,
         target_id: str,
         display_name: str,
-        expected_application: str,
+        expected_application: str | None,
         snapshot: TargetSnapshot,
         window_manager,
         copy_text: Callable[[str], None],
@@ -43,7 +43,7 @@ class GuiInputTargetAdapter(TargetAdapter):
         if not self.paste_enabled:
             raise RuntimeError("GUI paste is disabled. Enable it explicitly in VoiceBridge settings first.")
         actual = self.snapshot.application_name
-        if actual != self.expected_application:
+        if self.expected_application and actual != self.expected_application:
             raise RuntimeError(
                 f"The recorded target is {actual or 'unknown'}, not {self.expected_application}. "
                 "Focus the intended right-side chat input before starting the recording."
@@ -55,9 +55,10 @@ class GuiInputTargetAdapter(TargetAdapter):
         if not self.window_manager.paste():
             raise RuntimeError("Paste failed. Grant VoiceBridge Accessibility permission, then retry.")
         self.schedule(250, lambda: self._restore_clipboard_if_unchanged(text, previous_text))
+        destination = self.expected_application or actual or "recorded application"
         return DispatchResult(
             "input",
-            f"Paste shortcut sent to the recorded {self.expected_application} window; verify it before submitting.",
+            f"Paste shortcut sent to the recorded {destination} window; verify it before submitting.",
         )
 
     def _restore_clipboard_if_unchanged(self, temporary_text: str, previous_text: str) -> None:

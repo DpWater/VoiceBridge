@@ -19,15 +19,15 @@ from app.config.store import SettingsStore
 from app.core.state_machine import WorkflowState
 from app.models.contracts import AppSettings
 from app.platform.factory import get_window_manager
+from app.platform.macos.return_key_interceptor import MacOSReturnKeyInterceptor
 from app.providers.asr.faster_whisper import FasterWhisperProvider
 from app.providers.llm.openai_compatible import OpenAICompatibleProvider
-from app.providers.targets.clipboard import ClipboardTargetAdapter
 from app.providers.targets.gui_input import GuiInputTargetAdapter
 from app.services.audio_recorder import AudioRecorder
 from app.services.hotkey import PynputToggleHotkey
 from app.services.workflow_controller import WorkflowController
 from app.ui.floating_recorder import FloatingRecorder
-from app.ui.review_dialog import ReviewDialog
+from app.ui.paste_bubble_dialog import PasteBubbleDialog
 from app.ui.shortcut_settings_dialog import ShortcutSettingsDialog
 from app.ui.system_tray import SystemTray
 
@@ -36,6 +36,7 @@ class _Signals(QObject):
     review_ready = Signal(str, str)
     failed = Signal(str)
     hotkey_pressed = Signal()
+    return_pressed = Signal()
 
 
 class MainWindow(QMainWindow):
@@ -60,6 +61,7 @@ class MainWindow(QMainWindow):
         self.signals.review_ready.connect(self._review)
         self.signals.failed.connect(self._error)
         self.signals.hotkey_pressed.connect(self._on_hotkey)
+        self.signals.return_pressed.connect(self._on_return)
         self.floating = FloatingRecorder()
         self.setWindowTitle("VoiceBridge")
         body = QWidget()
@@ -83,11 +85,11 @@ class MainWindow(QMainWindow):
         content_layout = QVBoxLayout(content)
         content_layout.setContentsMargins(30, 30, 30, 30)
         content_layout.setSpacing(12)
-        eyebrow = QLabel("VOICE → REVIEW → ROUTE")
+        eyebrow = QLabel("VOICE → EDIT → PASTE")
         eyebrow.setObjectName("eyebrow")
-        headline = QLabel("把语音发送到正在工作的对话")
+        headline = QLabel("把语音粘贴到你的光标位置")
         headline.setObjectName("headline")
-        subtitle = QLabel("录音、整理、确认后，将文字安全粘贴回 Cursor 或 Trae 右侧聊天栏。不会自动提交。")
+        subtitle = QLabel("先把光标放在任意输入框：快捷键开始说话，Enter 结束识别；结果可编辑，再按 Enter 粘贴。不会自动提交。")
         subtitle.setObjectName("subtitle")
         subtitle.setWordWrap(True)
         content_layout.addWidget(eyebrow)
@@ -101,7 +103,7 @@ class MainWindow(QMainWindow):
         card_layout.setSpacing(12)
         card_title = QLabel("快速录音")
         card_title.setObjectName("sectionTitle")
-        card_note = QLabel("先把焦点放在 IDE 右侧聊天输入框，再使用全局快捷键；或者使用下方按钮进行本地录音测试。")
+        card_note = QLabel("VoiceBridge 会记住开始录音前的活动窗口。录音中按 Enter 会被拦截，只用于结束录音，不会发送目标对话。")
         card_note.setObjectName("muted")
         card_note.setWordWrap(True)
         self.status = QLabel("等待录音。")
@@ -126,6 +128,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(body)
         self.tray = SystemTray(self, self._show_from_tray, self._start_from_tray, QApplication.quit)
         self.hotkey_backend = None
+        self.return_interceptor = None
         if self.settings.hotkey_enabled:
             self._start_hotkey()
 
@@ -137,7 +140,11 @@ class MainWindow(QMainWindow):
             self._toggle_recording()
 
     def _on_hotkey(self) -> None:
-        if self.controller.workflow.state in {WorkflowState.IDLE, WorkflowState.RECORDING}:
+        if self.controller.workflow.state is WorkflowState.IDLE:
+            self._toggle_recording()
+
+    def _on_return(self) -> None:
+        if self.controller.workflow.state is WorkflowState.RECORDING:
             self._toggle_recording()
 
     def _start_hotkey(self) -> None:
@@ -146,9 +153,17 @@ class MainWindow(QMainWindow):
                 self.settings.hotkey, lambda: self.signals.hotkey_pressed.emit()
             )
             self.hotkey_backend.start()
-            self.status.setText(f"全局快捷键已启用：{self.settings.hotkey}")
+            self.return_interceptor = MacOSReturnKeyInterceptor(
+                lambda: self.controller.workflow.state is WorkflowState.RECORDING,
+                lambda: self.signals.return_pressed.emit(),
+            )
+            self.return_interceptor.start()
+            self.status.setText(f"全局快捷键已启用：{self.settings.hotkey}。录音中按 Enter 结束。")
         except RuntimeError as exc:
+            if self.hotkey_backend:
+                self.hotkey_backend.stop()
             self.hotkey_backend = None
+            self.return_interceptor = None
             self.status.setText(f"全局快捷键不可用：{exc}")
 
     def _configure_shortcut(self) -> None:
@@ -158,6 +173,9 @@ class MainWindow(QMainWindow):
         if self.hotkey_backend:
             self.hotkey_backend.stop()
             self.hotkey_backend = None
+        if self.return_interceptor:
+            self.return_interceptor.stop()
+            self.return_interceptor = None
         self.settings.hotkey = dialog.hotkey
         self.settings.hotkey_enabled = dialog.enabled.isChecked()
         self.store.save(self.settings)
@@ -172,14 +190,15 @@ class MainWindow(QMainWindow):
                 self.target_snapshot = self.window_manager.capture_active_target()
                 self.controller.workflow.start(); self.recorder.start()
                 self.record_button.setText("停止并识别")
-                self.status.setText("正在录音…")
+                self.status.setText("正在录音…按 Enter 结束并开始识别。")
                 self.floating.show_recording()
             except Exception as exc:
                 self._error(str(exc))
         elif self.controller.workflow.state is WorkflowState.RECORDING:
             try:
                 audio = self.recorder.stop(); self.record_button.setEnabled(False)
-                self.status.setText("正在识别语音…")
+                preparing = "正在识别并由 DeepSeek 整理…" if self.settings.use_enhancement else "正在识别语音…"
+                self.status.setText(preparing)
                 self.floating.show_status("正在识别…")
                 self.controller.process(audio, self.settings.terminology,
                                         lambda raw, revised: self.signals.review_ready.emit(raw, revised),
@@ -188,19 +207,13 @@ class MainWindow(QMainWindow):
                 self._error(str(exc))
 
     def _review(self, original: str, revised: str) -> None:
-        self.floating.hide(); self.status.setText("等待你确认发送目标与内容。")
-        dialog = ReviewDialog(
-            original,
-            revised,
-            self._build_targets(),
-            self.settings.default_target,
-            self.target_snapshot,
-            self,
-        )
+        self.floating.hide(); self.status.setText("已识别。可修改文字后按 Enter 粘贴到原光标处。")
+        target = self._active_cursor_target()
+        dialog = PasteBubbleDialog(revised, self.target_snapshot.application_name, self)
         if dialog.exec() and dialog.text:
             try:
                 self.controller.workflow.transition(WorkflowState.DISPATCHING)
-                result = dialog.target.dispatch(dialog.text)
+                result = target.dispatch(dialog.text)
                 self.controller.workflow.transition(WorkflowState.COMPLETED)
                 self.status.setText(result.message)
             except Exception as exc:
@@ -220,32 +233,18 @@ class MainWindow(QMainWindow):
     def _schedule(delay_ms: int, callback) -> None:
         QTimer.singleShot(delay_ms, callback)
 
-    def _build_targets(self):
-        return {
-            "clipboard": ClipboardTargetAdapter(),
-            "cursor-current": GuiInputTargetAdapter(
-                "cursor-current",
-                "Cursor — recorded right-side chat input",
-                "Cursor",
-                self.target_snapshot,
-                self.window_manager,
-                self._copy_to_clipboard,
-                self._clipboard_text,
-                self._schedule,
-                self.settings.gui_paste_enabled,
-            ),
-            "trae-current": GuiInputTargetAdapter(
-                "trae-current",
-                "Trae — recorded right-side chat input",
-                "Trae",
-                self.target_snapshot,
-                self.window_manager,
-                self._copy_to_clipboard,
-                self._clipboard_text,
-                self._schedule,
-                self.settings.gui_paste_enabled,
-            ),
-        }
+    def _active_cursor_target(self) -> GuiInputTargetAdapter:
+        return GuiInputTargetAdapter(
+            "active-cursor",
+            "录音前的光标位置",
+            None,
+            self.target_snapshot,
+            self.window_manager,
+            self._copy_to_clipboard,
+            self._clipboard_text,
+            self._schedule,
+            self.settings.gui_paste_enabled,
+        )
 
     def _error(self, message: str) -> None:
         self.floating.hide(); self.status.setText(f"错误：{message}")
@@ -263,5 +262,7 @@ class MainWindow(QMainWindow):
         self.recorder.cancel()
         if self.hotkey_backend:
             self.hotkey_backend.stop()
+        if self.return_interceptor:
+            self.return_interceptor.stop()
         self.controller.shutdown()
         super().closeEvent(event)
