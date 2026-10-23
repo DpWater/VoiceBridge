@@ -3,78 +3,70 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>VoiceBridge — 路由确认原型</title>
+  <title>VoiceBridge — 光标粘贴原型</title>
   <style>
-    :root { color-scheme: dark; --bg:#0b1020; --panel:#121a2e; --line:#263350; --muted:#94a3bd; --text:#f4f7ff; --violet:#8b5cf6; --cyan:#22d3ee; --good:#34d399; }
+    :root { color-scheme:dark; --bg:#080d1b; --surface:#111b31; --line:#273859; --text:#f4f7ff; --muted:#9aaccc; --cyan:#22d3ee; --green:#21c7a4; }
     * { box-sizing:border-box; }
-    body { margin:0; min-height:100vh; display:grid; place-items:center; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--text); background:radial-gradient(circle at 15% 10%,#1d2c5d 0,transparent 31%),radial-gradient(circle at 84% 90%,#30205c 0,transparent 32%),var(--bg); }
-    .app { width:min(1060px,94vw); min-height:650px; overflow:hidden; border:1px solid #344363; border-radius:22px; background:rgba(14,21,39,.92); box-shadow:0 30px 100px #0009; }
-    header { height:68px; padding:0 28px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); }
-    .brand { font-weight:700; letter-spacing:.2px; } .brand b { color:var(--cyan); } .state { font-size:13px; color:#b8c8e7; } .dot { display:inline-block; width:8px; height:8px; margin-right:7px; border-radius:50%; background:var(--good); box-shadow:0 0 14px var(--good); }
-    main { display:grid; grid-template-columns:1.12fr .88fr; gap:28px; padding:32px; } h1 { font-size:29px; margin:0 0 9px; } .sub { margin:0 0 25px; color:var(--muted); line-height:1.6; }
-    .card { border:1px solid var(--line); border-radius:16px; background:linear-gradient(140deg,#17213a,#10182c); padding:20px; } label { display:block; margin-bottom:9px; font-size:13px; color:#b8c8e7; } select, textarea { width:100%; color:var(--text); background:#0b1222; border:1px solid #344463; border-radius:10px; font:inherit; } select { padding:12px; } textarea { min-height:154px; resize:vertical; padding:13px; line-height:1.55; }
-    .target { margin-bottom:20px; } .capabilities { display:flex; flex-wrap:wrap; gap:7px; margin:11px 0 0; } .pill { padding:4px 8px; border-radius:999px; font-size:11px; background:#1e2d4d; color:#c9d7ef; } .pill.on { color:#b9ffe8; background:#163c3b; } .session-note { min-height:17px; margin:7px 1px 0; color:#92a5c8; font-size:11px; line-height:1.45; }
-    .context { margin:0 0 20px; padding:13px; border:1px solid #29395a; border-radius:11px; background:#0d1527; } .context-head { display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom:9px; } .context h2 { margin:0; font-size:13px; } .context em { font-style:normal; color:#9dacf0; font-size:11px; } .message { margin-top:8px; padding:9px 10px; border-left:2px solid #526383; background:#131e35; color:#b9c7df; font-size:12px; line-height:1.45; } .message b { display:block; margin-bottom:3px; color:#e6edff; font-size:11px; } .context-foot { margin:10px 0 0; color:#7f91b4; font-size:11px; line-height:1.45; }
-    .summary { margin-top:18px; display:flex; gap:12px; align-items:center; padding:13px; border:1px solid #3a3973; border-radius:11px; background:#171836; } .tool-logo { width:34px; height:34px; display:grid; place-items:center; border-radius:10px; background:linear-gradient(135deg,#6d4aff,#1ecce7); font-weight:800; } .summary strong { display:block; font-size:13px; } .summary span { font-size:12px; color:var(--muted); }
-    .actions { display:flex; justify-content:flex-end; gap:10px; margin-top:17px; } button { padding:11px 15px; border:1px solid #405171; border-radius:10px; color:#dce7fc; background:transparent; font:600 13px inherit; cursor:pointer; } button.primary { border-color:transparent; color:#fff; background:linear-gradient(90deg,#7c4df4,#256eea); box-shadow:0 8px 20px #5836a955; }
-    .right h2 { font-size:15px; margin:0 0 14px; } .flow { position:relative; padding:3px 0; } .flow:before { content:""; position:absolute; left:15px; top:22px; bottom:24px; width:1px; background:#3a4a70; } .step { position:relative; display:flex; gap:12px; padding:0 0 20px; } .step:last-child { padding-bottom:0; } .num { z-index:1; flex:0 0 31px; height:31px; display:grid; place-items:center; border:1px solid #53658d; border-radius:50%; background:#15203a; color:#a7b8d8; font-size:12px; } .step.active .num { color:#fff; border-color:#9272fb; background:#6846d9; box-shadow:0 0 16px #7754e088; } .step h3 { margin:3px 0 4px; font-size:13px; } .step p { margin:0; color:var(--muted); font-size:12px; line-height:1.45; }
-    .toast { display:none; margin-top:16px; padding:11px 13px; border-radius:10px; color:#c9ffe9; background:#123c35; font-size:13px; } .toast.show { display:block; }
-    .note { margin-top:20px; color:#7f91b4; font-size:12px; line-height:1.55; }
-    @media (max-width:760px) { main { grid-template-columns:1fr; padding:20px; } .app { margin:18px 0; } }
+    body { min-height:100vh; margin:0; display:grid; place-items:center; overflow:hidden; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--text); background:radial-gradient(circle at 24% 18%,#1b3263 0,transparent 31%),radial-gradient(circle at 84% 85%,#30205c 0,transparent 34%),var(--bg); }
+    .stage { width:min(1050px,94vw); min-height:650px; position:relative; overflow:hidden; border:1px solid #304361; border-radius:22px; background:#0c1426cc; box-shadow:0 30px 100px #000b; }
+    header { height:66px; padding:0 26px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); background:#10192c; }
+    .brand { font-weight:760; font-size:18px; } .brand b { color:var(--cyan); } .ready { font-size:13px; color:#b8ffe4; } .ready i { display:inline-block; width:8px; height:8px; margin-right:7px; border-radius:50%; background:#4fe0b9; box-shadow:0 0 14px #4fe0b9; }
+    .workspace { position:absolute; inset:66px 0 0; padding:52px 70px; opacity:.35; filter:blur(.1px); pointer-events:none; }
+    .workspace h1 { margin:0 0 12px; font-size:30px; } .workspace p { color:var(--muted); font-size:15px; }
+    .ghost-chat { width:58%; margin-top:52px; padding:18px; border:1px solid #31466b; border-radius:16px; background:#10192e; } .ghost-line { height:11px; margin:12px 0; border-radius:99px; background:#40577e; } .ghost-line.short { width:56%; } .cursor { display:inline-block; width:2px; height:18px; margin:0 3px -4px; background:var(--cyan); animation:blink 1s step-end infinite; } @keyframes blink { 50% { opacity:0; } }
+    .bubble { width:min(610px,calc(100% - 32px)); position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); padding:20px; border:1px solid #49638e; border-radius:18px; background:linear-gradient(140deg,#182844,#10192d); box-shadow:0 20px 70px #000c; transition:.18s ease; }
+    .bubble.dismissed { opacity:0; transform:translate(-50%,-44%); pointer-events:none; }
+    .bubble-head { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:12px; } .bubble-title { display:flex; align-items:center; gap:9px; font-size:14px; font-weight:700; } .mic { width:26px; height:26px; display:grid; place-items:center; border-radius:9px; color:#08231f; background:var(--green); } .hint { color:var(--muted); font-size:12px; }
+    textarea { width:100%; min-height:130px; padding:14px; resize:vertical; color:var(--text); border:1px solid #3b5279; border-radius:12px; outline:none; background:#091224; font:15px/1.6 inherit; } textarea:focus { border-color:var(--cyan); box-shadow:0 0 0 3px #22d3ee1c; }
+    .footer { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; } .keys { color:var(--muted); font-size:12px; } kbd { padding:2px 5px; border:1px solid #52698f; border-radius:5px; color:#dfeaff; background:#1a2942; font-family:inherit; font-size:11px; }
+    button { padding:10px 14px; border:1px solid #486184; border-radius:10px; color:#dce9ff; background:#18253d; font:650 13px inherit; cursor:pointer; } button:hover { background:#223554; } button.primary { color:#06251f; border-color:transparent; background:var(--green); } button.primary:hover { background:#3de0c1; }
+    .sent { display:none; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(470px,calc(100% - 32px)); padding:28px; text-align:center; border:1px solid #297965; border-radius:18px; background:#102d2c; box-shadow:0 20px 70px #000b; } .sent.show { display:block; } .sent strong { display:block; font-size:19px; color:#baffed; } .sent p { margin:9px 0 19px; color:#a9d9cd; line-height:1.5; }
+    .corner-note { position:absolute; right:28px; bottom:22px; color:#7285aa; font-size:12px; }
+    @media (max-width:650px) { .workspace { padding:35px 25px; } .bubble { top:46%; } .footer { align-items:stretch; flex-direction:column; } .footer button { width:100%; } }
   </style>
 </head>
 <body>
-  <section class="app" aria-label="VoiceBridge product prototype">
-    <header><div class="brand"><b>◉</b> VoiceBridge</div><div class="state"><i class="dot"></i>已就绪 · 本地优先</div></header>
-    <main>
-      <div>
-        <h1>确认后，直接路由到你的工具</h1>
-        <p class="sub">录音已整理成可编辑指令。选择一个已配置的 VibeCoding 工具，再确认发送；是否自动提交取决于该工具的已验证能力。</p>
-        <section class="card">
-          <div class="target">
-            <label for="tool">1. 选择工具</label>
-            <select id="tool" onchange="updateTarget()">
-              <option value="Cursor">Cursor · 当前运行中</option>
-              <option value="Trae">Trae · 当前运行中</option>
-              <option value="Codex CLI">Codex CLI · 当前项目</option>
-              <option value="Claude Code">Claude Code · 当前项目</option>
-              <option value="Clipboard">仅复制到剪贴板</option>
-            </select>
-            <div class="capabilities" id="caps"></div>
-          </div>
-          <div class="target" id="conversationArea">
-            <label for="conversation">2. 选择对话 / 会话</label>
-            <select id="conversation"></select>
-            <p class="session-note" id="sessionNote"></p>
-          </div>
-          <section class="context" aria-live="polite">
-            <div class="context-head"><h2>当前对话内容预览</h2><em id="contextMode">仅供你确认 · 不发送到 LLM</em></div>
-            <div id="contextMessages"></div>
-            <p class="context-foot">仅显示用户已授权且适配器实际可读取的最近上下文；可以在发送前清除或选择不附带。</p>
-          </section>
-          <label for="prompt">准备发送的指令</label>
-          <textarea id="prompt">请检查 Router 的条件分支：当请求没有 thread_id 时，是否会错误恢复上一次 LangGraph checkpoint？只分析问题和建议，不要修改代码。</textarea>
-          <div class="summary"><div class="tool-logo" id="logo">↗</div><div><strong id="summaryTitle">将发送到 Cursor 的当前对话</strong><span id="summaryText">发送前会确认该聊天输入框仍是活动焦点。</span></div></div>
-          <div class="actions"><button onclick="document.getElementById('prompt').focus()">继续编辑</button><button class="primary" onclick="send()">确认并发送 ↗</button></div>
-          <div class="toast" id="toast"></div>
-        </section>
-        <p class="note">安全规则：自动路由只能调用用户预先配置并明确启用的适配器；发送状态只表示应用已接收或进程已启动，不等同于任务已完成。</p>
-      </div>
-      <aside class="right card"><h2>本次指令的受控流程</h2><div class="flow"><div class="step"><div class="num">1</div><div><h3>语音转写</h3><p>本地 ASR 生成原始文本。</p></div></div><div class="step"><div class="num">2</div><div><h3>忠实整理</h3><p>可选 LLM 只修正表达和技术术语。</p></div></div><div class="step active"><div class="num">3</div><div><h3>用户审阅与路由</h3><p>选择工具、工作区及当前或指定会话。</p></div></div><div class="step"><div class="num">4</div><div><h3>会话适配器</h3><p>优先使用真实会话 API；否则只向已验证的活动输入框粘贴。</p></div></div><div class="step"><div class="num">5</div><div><h3>明确反馈</h3><p>展示“已发送到会话 / 已启动 / 已复制”，不虚构执行结果。</p></div></div></div></aside>
-    </main>
-  </section>
+  <main class="stage" aria-label="VoiceBridge 光标粘贴交互原型">
+    <header><div class="brand"><b>◉</b> VoiceBridge</div><div class="ready"><i></i>等待你的快捷键</div></header>
+    <section class="workspace" aria-hidden="true">
+      <h1>Trae · 当前对话</h1>
+      <p>光标已停在这里<span class="cursor"></span></p>
+      <div class="ghost-chat"><div class="ghost-line"></div><div class="ghost-line short"></div><div class="ghost-line"></div></div>
+    </section>
+    <section class="bubble" id="bubble" aria-label="识别文字确认框">
+      <div class="bubble-head"><div class="bubble-title"><span class="mic">⌁</span>刚刚识别到的文字</div><span class="hint">可以直接修改</span></div>
+      <textarea id="text" autofocus>请检查 Router 的条件分支：当请求没有 thread_id 时，是否会错误恢复上一次 LangGraph checkpoint？只分析问题和建议，不要修改代码。</textarea>
+      <div class="footer"><div class="keys"><kbd>Enter</kbd> 粘贴到光标处　<kbd>Shift</kbd> + <kbd>Enter</kbd> 换行</div><button class="primary" id="paste">粘贴到光标处 ↵</button></div>
+    </section>
+    <section class="sent" id="sent" aria-live="polite">
+      <strong>已粘贴到原来的光标处</strong>
+      <p>没有自动按回车，也没有自动发送。你可以继续编辑后自行提交。</p>
+      <button id="again">模拟下一次语音识别</button>
+    </section>
+    <div class="corner-note">Esc 取消本次粘贴</div>
+  </main>
   <script>
-    const details = {
-      'Codex CLI': ['C', '将启动 Codex CLI 的指定会话', '使用当前项目目录，按所选会话策略新建或恢复。', ['CLI 启动', '工作目录', '会话恢复'], [['新建任务', '新建一个可见任务', []], ['恢复会话 · 8ac21f', 'CLI 已验证可恢复的会话', [['你', '继续检查 Router 条件分支。'], ['Codex', '我会先定位 `thread_id` 的恢复路径，再报告风险。']]]]],
-      'Cursor': ['↗', '将发送到 Cursor 右侧的当前对话', '触发前聚焦右侧聊天栏输入框；VoiceBridge 不会点击代码编辑区。', ['右侧对话', 'GUI 输入', '不自动提交'], [['右侧当前对话 · Router 诊断', '检测到 Cursor 正在前台', [['你', 'Router 没有 thread_id 时会如何处理？'], ['Cursor', '当前代码会进入 `restore_checkpoint`，我正在检查空值保护。']]], ['选择窗口后发送', 'Cursor 无稳定会话 API 时的安全方式', []]]],
-      'Trae': ['T', '将发送到 Trae 右侧的当前对话', '触发前聚焦右侧聊天栏输入框；只粘贴，不提交。', ['右侧对话', 'GUI 输入', '不自动提交'], [['右侧当前对话 · 资产索引重构', '检测到 Trae 正在前台', [['你', '索引增量更新的边界情况有哪些？'], ['Trae', '目前正在比较删除、重命名和空目录三类情况。']]], ['选择窗口后发送', '没有可验证会话 ID 时不显示历史会话', []]]],
-      'Claude Code': ['✦', '将启动 Claude Code 的指定会话', '在用户配置的工作目录中启动独立会话。', ['CLI 启动', '工作目录', '会话恢复'], [['新建会话', '在当前项目中启动', []], ['恢复会话 · feature/router', '仅列出 CLI 实际可恢复的会话', [['你', '保留现有 API，分析恢复逻辑。'], ['Claude Code', '我已记录约束，会仅做分析，不修改文件。']]]]],
-      'Clipboard': ['▣', '将复制到剪贴板', '不切换窗口，也不会模拟提交。', ['复制', '安全降级'], [['只复制', '保留你当前的任何对话状态', []]]]
-    };
-    function renderContext(session) { const messages = session[2], holder = document.getElementById('contextMessages'); holder.innerHTML = messages.length ? messages.map(([role,text])=>`<div class="message"><b>${role}</b>${text}</div>`).join('') : '<div class="message"><b>没有可读取的内容</b>此目标未提供可验证的会话上下文，发送时不会附带聊天记录。</div>'; document.getElementById('contextMode').textContent = messages.length ? '仅供你确认 · 不发送到 LLM' : '无可读取会话内容'; }
-    function updateTarget() { const name = document.getElementById('tool').value, d = details[name], select = document.getElementById('conversation'); document.getElementById('logo').textContent=d[0]; document.getElementById('summaryTitle').textContent=d[1]; document.getElementById('summaryText').textContent=d[2]; document.getElementById('caps').innerHTML=d[3].map((x,i)=>`<span class="pill ${i===0?'on':''}">${x}</span>`).join(''); select.innerHTML=d[4].map(([title])=>`<option value="${title}">${title}</option>`).join(''); document.getElementById('sessionNote').textContent=d[4][0][1]; renderContext(d[4][0]); select.onchange=()=>{ const session=d[4][select.selectedIndex]; document.getElementById('sessionNote').textContent=session[1]; renderContext(session); }; }
-    function send() { const target=document.getElementById('tool').value, conversation=document.getElementById('conversation').value, toast=document.getElementById('toast'); toast.textContent=target==='Clipboard'?'已复制，等待你粘贴到目标工具。':`将发送到 ${target}：${conversation}（原型演示，未实际发送）。`; toast.classList.add('show'); }
-    updateTarget();
+    const bubble = document.getElementById('bubble');
+    const sent = document.getElementById('sent');
+    const text = document.getElementById('text');
+    function pasteAtCursor() {
+      if (!text.value.trim()) { text.focus(); return; }
+      bubble.classList.add('dismissed');
+      sent.classList.add('show');
+    }
+    document.getElementById('paste').addEventListener('click', pasteAtCursor);
+    text.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); pasteAtCursor(); }
+      if (event.key === 'Escape') { bubble.classList.add('dismissed'); }
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') { bubble.classList.add('dismissed'); }
+    });
+    document.getElementById('again').addEventListener('click', () => {
+      sent.classList.remove('show');
+      bubble.classList.remove('dismissed');
+      text.focus();
+    });
   </script>
 </body>
 </html>
