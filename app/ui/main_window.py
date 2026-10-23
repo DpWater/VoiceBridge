@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import platform
+
 from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
@@ -149,19 +151,25 @@ class MainWindow(QMainWindow):
 
     def _start_hotkey(self) -> None:
         try:
-            self.hotkey_backend = PynputToggleHotkey(
-                self.settings.hotkey, lambda: self.signals.hotkey_pressed.emit()
-            )
-            self.hotkey_backend.start()
-            self.return_interceptor = MacOSReturnKeyInterceptor(
-                lambda: self.controller.workflow.state is WorkflowState.RECORDING,
-                lambda: self.signals.return_pressed.emit(),
-            )
-            self.return_interceptor.start()
+            if platform.system() == "Darwin":
+                self.return_interceptor = MacOSReturnKeyInterceptor(
+                    self.settings.hotkey,
+                    lambda: self.signals.hotkey_pressed.emit(),
+                    lambda: self.controller.workflow.state is WorkflowState.RECORDING,
+                    lambda: self.signals.return_pressed.emit(),
+                )
+                self.return_interceptor.start()
+            else:
+                self.hotkey_backend = PynputToggleHotkey(
+                    self.settings.hotkey, lambda: self.signals.hotkey_pressed.emit()
+                )
+                self.hotkey_backend.start()
             self.status.setText(f"全局快捷键已启用：{self.settings.hotkey}。录音中按 Enter 结束。")
         except RuntimeError as exc:
             if self.hotkey_backend:
                 self.hotkey_backend.stop()
+            if self.return_interceptor:
+                self.return_interceptor.stop()
             self.hotkey_backend = None
             self.return_interceptor = None
             self.status.setText(f"全局快捷键不可用：{exc}")
