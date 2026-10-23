@@ -29,7 +29,20 @@ class FasterWhisperProvider(SpeechRecognitionProvider):
     def _get_model(self):
         if self._model is None:
             from faster_whisper import WhisperModel
-            self._model = WhisperModel(self.model_name, device=self.device, compute_type=self.compute_type)
+            try:
+                # Recording must never silently begin a several-hundred-megabyte download.
+                # Besides appearing frozen, it leaves no reliable way to cancel the worker.
+                self._model = WhisperModel(
+                    self.model_name,
+                    device=self.device,
+                    compute_type=self.compute_type,
+                    local_files_only=True,
+                )
+            except Exception as exc:
+                raise RuntimeError(
+                    f"语音模型“{self.model_name}”尚未在本机准备好。"
+                    "请先下载模型后再录音；VoiceBridge 不会在识别过程中自动下载模型。"
+                ) from exc
         return self._model
 
     def transcribe(self, audio: AudioBuffer) -> TranscriptionResult:
