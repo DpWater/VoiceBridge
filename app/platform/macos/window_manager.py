@@ -16,7 +16,8 @@ class MacOSWindowManager:
 
     _frontmost_script = (
         'tell application "System Events"\n'
-        '  return name of first application process whose frontmost is true\n'
+        '  set targetProcess to first application process whose frontmost is true\n'
+        '  return (name of targetProcess) & "|" & (unix id of targetProcess)\n'
         'end tell'
     )
     _paste_script = 'tell application "System Events" to keystroke "v" using command down'
@@ -38,9 +39,21 @@ class MacOSWindowManager:
             text=True,
             check=False,
         )
-        app_name = result.stdout.strip() if result.returncode == 0 else ""
+        app_name, process_id = self._parse_frontmost(result.stdout if result.returncode == 0 else "")
         cursor_x, cursor_y = self._cursor_position()
-        return TargetSnapshot(application_name=app_name or None, cursor_x=cursor_x, cursor_y=cursor_y)
+        return TargetSnapshot(
+            application_name=app_name or None,
+            process_id=process_id,
+            cursor_x=cursor_x,
+            cursor_y=cursor_y,
+        )
+
+    @staticmethod
+    def _parse_frontmost(output: str) -> tuple[str, int | None]:
+        name, separator, possible_pid = output.strip().rpartition("|")
+        if separator and possible_pid.isdigit():
+            return name, int(possible_pid)
+        return output.strip(), None
 
     @staticmethod
     def _read_cursor_position() -> tuple[int | None, int | None]:
@@ -56,6 +69,24 @@ class MacOSWindowManager:
     def activate(self, target: TargetSnapshot) -> bool:
         if not self.is_supported() or not target.application_name:
             return False
+        if target.process_id:
+            result = self._runner(
+                [
+                    "/usr/bin/osascript",
+                    "-e",
+                    (
+                        'tell application "System Events" to set frontmost of first application process '
+                        f"whose unix id is {target.process_id} to true"
+                    ),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.returncode == 0:
+                time.sleep(0.25)
+                if self.capture_active_target().process_id == target.process_id:
+                    return True
         result = self._runner(
             ["/usr/bin/open", "-a", target.application_name],
             capture_output=True,
@@ -65,7 +96,8 @@ class MacOSWindowManager:
         if result.returncode:
             return False
         time.sleep(0.2)
-        return self.capture_active_target().application_name == target.application_name
+        restored = self.capture_active_target()
+        return restored.application_name == target.application_name
 
     def paste(self) -> bool:
         if not self.is_supported():
