@@ -3,70 +3,112 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>VoiceBridge — 光标粘贴原型</title>
+  <title>VoiceBridge — 光标浮层交互原型</title>
   <style>
-    :root { color-scheme:dark; --bg:#080d1b; --surface:#111b31; --line:#273859; --text:#f4f7ff; --muted:#9aaccc; --cyan:#22d3ee; --green:#21c7a4; }
-    * { box-sizing:border-box; }
-    body { min-height:100vh; margin:0; display:grid; place-items:center; overflow:hidden; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--text); background:radial-gradient(circle at 24% 18%,#1b3263 0,transparent 31%),radial-gradient(circle at 84% 85%,#30205c 0,transparent 34%),var(--bg); }
-    .stage { width:min(1050px,94vw); min-height:650px; position:relative; overflow:hidden; border:1px solid #304361; border-radius:22px; background:#0c1426cc; box-shadow:0 30px 100px #000b; }
-    header { height:66px; padding:0 26px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); background:#10192c; }
-    .brand { font-weight:760; font-size:18px; } .brand b { color:var(--cyan); } .ready { font-size:13px; color:#b8ffe4; } .ready i { display:inline-block; width:8px; height:8px; margin-right:7px; border-radius:50%; background:#4fe0b9; box-shadow:0 0 14px #4fe0b9; }
-    .workspace { position:absolute; inset:66px 0 0; padding:52px 70px; opacity:.35; filter:blur(.1px); pointer-events:none; }
-    .workspace h1 { margin:0 0 12px; font-size:30px; } .workspace p { color:var(--muted); font-size:15px; }
-    .ghost-chat { width:58%; margin-top:52px; padding:18px; border:1px solid #31466b; border-radius:16px; background:#10192e; } .ghost-line { height:11px; margin:12px 0; border-radius:99px; background:#40577e; } .ghost-line.short { width:56%; } .cursor { display:inline-block; width:2px; height:18px; margin:0 3px -4px; background:var(--cyan); animation:blink 1s step-end infinite; } @keyframes blink { 50% { opacity:0; } }
-    .bubble { width:min(610px,calc(100% - 32px)); position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); padding:20px; border:1px solid #49638e; border-radius:18px; background:linear-gradient(140deg,#182844,#10192d); box-shadow:0 20px 70px #000c; transition:.18s ease; }
-    .bubble.dismissed { opacity:0; transform:translate(-50%,-44%); pointer-events:none; }
-    .bubble-head { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:12px; } .bubble-title { display:flex; align-items:center; gap:9px; font-size:14px; font-weight:700; } .mic { width:26px; height:26px; display:grid; place-items:center; border-radius:9px; color:#08231f; background:var(--green); } .hint { color:var(--muted); font-size:12px; }
-    textarea { width:100%; min-height:130px; padding:14px; resize:vertical; color:var(--text); border:1px solid #3b5279; border-radius:12px; outline:none; background:#091224; font:15px/1.6 inherit; } textarea:focus { border-color:var(--cyan); box-shadow:0 0 0 3px #22d3ee1c; }
-    .footer { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; } .keys { color:var(--muted); font-size:12px; } kbd { padding:2px 5px; border:1px solid #52698f; border-radius:5px; color:#dfeaff; background:#1a2942; font-family:inherit; font-size:11px; }
-    button { padding:10px 14px; border:1px solid #486184; border-radius:10px; color:#dce9ff; background:#18253d; font:650 13px inherit; cursor:pointer; } button:hover { background:#223554; } button.primary { color:#06251f; border-color:transparent; background:var(--green); } button.primary:hover { background:#3de0c1; }
-    .sent { display:none; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(470px,calc(100% - 32px)); padding:28px; text-align:center; border:1px solid #297965; border-radius:18px; background:#102d2c; box-shadow:0 20px 70px #000b; } .sent.show { display:block; } .sent strong { display:block; font-size:19px; color:#baffed; } .sent p { margin:9px 0 19px; color:#a9d9cd; line-height:1.5; }
-    .corner-note { position:absolute; right:28px; bottom:22px; color:#7285aa; font-size:12px; }
-    @media (max-width:650px) { .workspace { padding:35px 25px; } .bubble { top:46%; } .footer { align-items:stretch; flex-direction:column; } .footer button { width:100%; } }
+    :root {
+      color-scheme: dark;
+      --ink: #eaf1ff;
+      --muted: #8c9ab6;
+      --bg: #0a1020;
+      --panel: #121c31;
+      --panel-2: #17243d;
+      --line: #2c3d5f;
+      --cyan: #3ee2f2;
+      --mint: #5df0b8;
+      --violet: #a991ff;
+      --shadow: 0 18px 55px #020611c7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh; margin: 0; display: grid; place-items: center; overflow: hidden;
+      color: var(--ink); background: radial-gradient(circle at 14% 10%, #1d315a 0, transparent 31%), #070b15;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .stage {
+      width: min(1180px, 95vw); height: min(730px, 88vh); position: relative; overflow: hidden;
+      border: 1px solid #344664; border-radius: 20px; background: #111927; box-shadow: 0 35px 100px #000a;
+    }
+    .appbar { height: 57px; display: flex; align-items: center; gap: 12px; padding: 0 20px; border-bottom: 1px solid #27344b; background: #182231; }
+    .traffic { display: flex; gap: 7px; } .traffic i { width: 11px; height: 11px; border-radius: 50%; background: #5e6877; } .traffic i:first-child { background: #ef665e; } .traffic i:nth-child(2) { background: #edb94c; } .traffic i:last-child { background: #57c77d; }
+    .appname { margin-left: 3px; color: #cdd8ea; font-size: 13px; font-weight: 650; }
+    .live-indicator { margin-left: auto; display: flex; align-items: center; gap: 7px; color: #9feccf; font-size: 12px; }
+    .live-indicator i { width: 7px; height: 7px; border-radius: 99px; background: var(--mint); box-shadow: 0 0 10px var(--mint); }
+    .ide { position: absolute; inset: 57px 0 0; display: grid; grid-template-columns: 54% 46%; color: #cbd4e5; }
+    .code { padding: 38px 42px; border-right: 1px solid #27344b; background: #111827; }
+    .file { color: #8394b1; font-size: 12px; } .code h2 { margin: 18px 0 22px; font-size: 20px; color: #e5ecf9; }
+    .code-line { height: 12px; margin: 14px 0; border-radius: 3px; background: linear-gradient(90deg, #3c5577 0 12%, #6b5caf 12% 26%, #4b86a7 26% 45%, transparent 45%); opacity: .65; }
+    .code-line.wide { width: 86%; } .code-line.medium { width: 67%; } .code-line.short { width: 42%; } .code-line.indent { margin-left: 28px; width: 70%; }
+    .chat { padding: 28px 29px 23px; background: #151d2a; }
+    .chat header { display: flex; align-items: center; justify-content: space-between; color: #e7edf9; font-size: 15px; font-weight: 750; }
+    .conversation { margin-top: 22px; } .message { margin: 0 0 17px; padding: 12px 13px; border-radius: 10px; color: #bac6d9; background: #202b3e; font-size: 13px; line-height: 1.55; }
+    .message.me { margin-left: 16%; color: #d6e5ff; background: #24395a; }
+    .composer { position: absolute; right: 28px; bottom: 25px; left: 57%; min-height: 92px; padding: 13px 15px; border: 1px solid #476185; border-radius: 13px; color: #dbe7fb; background: #111b2c; box-shadow: inset 0 0 0 1px #08101c; }
+    .composer-label { color: #7588a7; font-size: 11px; } .caret { display: inline-block; width: 2px; height: 17px; margin: 6px 2px -4px; background: var(--cyan); animation: blink .9s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .anchor { position: absolute; right: 56px; bottom: 87px; width: 11px; height: 11px; border: 2px solid var(--cyan); border-radius: 50%; background: #0e1728; box-shadow: 0 0 0 5px #3ee2f21f, 0 0 17px #3ee2f2b8; z-index: 3; }
+    .anchor::after { content: "原光标"; position: absolute; right: 16px; top: -5px; width: 40px; color: #8aa6c4; font-size: 10px; white-space: nowrap; }
+    .overlay { position: absolute; right: 24px; bottom: 112px; width: min(432px, calc(100% - 40px)); z-index: 4; transition: opacity .22s ease, transform .22s ease; }
+    .overlay.hidden { opacity: 0; pointer-events: none; transform: translateY(8px) scale(.98); }
+    .recording, .transcribing {
+      display: flex; align-items: center; gap: 12px; padding: 13px 15px; border: 1px solid #375171;
+      border-radius: 15px; background: #132139f2; box-shadow: var(--shadow); backdrop-filter: blur(18px);
+    }
+    .state-icon { width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 11px; background: #125e5c; color: #c5fff0; }
+    .pulse { width: 11px; height: 11px; border-radius: 50%; background: #58f2c0; box-shadow: 0 0 0 0 #58f2c080; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 70% { box-shadow: 0 0 0 10px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+    .state-text { min-width: 0; flex: 1; } .state-text strong { display: block; font-size: 13px; } .state-text span { display: block; margin-top: 3px; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .sound { display: flex; align-items: center; gap: 3px; height: 24px; } .sound i { width: 3px; height: 8px; border-radius: 99px; background: var(--mint); animation: wave 1s ease-in-out infinite; } .sound i:nth-child(2) { height: 17px; animation-delay: .14s; } .sound i:nth-child(3) { height: 12px; animation-delay: .28s; } .sound i:nth-child(4) { height: 20px; animation-delay: .42s; } .sound i:nth-child(5) { height: 10px; animation-delay: .56s; } @keyframes wave { 50% { transform: scaleY(.45); } }
+    .transcribing .state-icon { background: #413370; } .spinner { width: 15px; height: 15px; border: 2px solid #c7b8ff42; border-top-color: #d8ceff; border-radius: 50%; animation: spin .7s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }
+    .result { padding: 10px; border: 1px solid #516489; border-radius: 17px; background: #15223af5; box-shadow: var(--shadow); backdrop-filter: blur(18px); }
+    .result-top { display: flex; align-items: center; gap: 8px; padding: 2px 4px 9px; } .spark { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 8px; color: #231b44; background: var(--violet); font-size: 14px; } .result-top strong { font-size: 12px; } .result-top span { margin-left: auto; color: #88b9ab; font-size: 11px; }
+    textarea { width: 100%; min-height: 103px; max-height: 190px; padding: 10px 11px; resize: vertical; outline: 0; color: var(--ink); border: 1px solid transparent; border-radius: 10px; background: #0c1525; font: 13px/1.6 inherit; } textarea:focus { border-color: #4e80a0; box-shadow: 0 0 0 2px #3ee2f219; }
+    .result-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 3px 1px; } .keys { color: var(--muted); font-size: 10px; } kbd { padding: 1px 4px; border: 1px solid #526583; border-radius: 4px; color: #dce8fc; background: #25334b; font: 10px inherit; }
+    button { border: 0; font: 650 12px inherit; cursor: pointer; } .paste { padding: 7px 10px; border-radius: 8px; color: #112b2b; background: var(--mint); } .paste:hover { background: #8affd8; }
+    .toast { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border: 1px solid #3d826d; border-radius: 13px; color: #b9f7de; background: #15372fa8; box-shadow: var(--shadow); font-size: 12px; backdrop-filter: blur(16px); }
+    .toast b { font-size: 15px; } .toast span { color: #a0cbbd; }
+    .controls { position: absolute; left: 23px; bottom: 20px; z-index: 5; display: flex; gap: 7px; padding: 6px; border: 1px solid #31425e; border-radius: 12px; background: #111a2bf2; box-shadow: 0 8px 28px #0008; }
+    .controls button { padding: 7px 9px; border-radius: 8px; color: #98a9c4; background: transparent; font-size: 11px; } .controls button.active { color: #d9f8ff; background: #27415a; } .controls button:hover { color: white; }
+    .guide { position: absolute; top: 72px; left: 22px; z-index: 4; padding: 8px 10px; border: 1px solid #354965; border-radius: 9px; color: #99abc6; background: #101a2ad9; font-size: 11px; }
+    .guide b { color: var(--cyan); }
+    @media (max-width: 720px) { .stage { height: 92vh; } .ide { grid-template-columns: 1fr; } .code { display: none; } .chat { padding: 24px 20px; } .composer { left: 20px; right: 20px; } .overlay { right: 16px; bottom: 126px; } .anchor { right: 41px; } .controls { left: 14px; bottom: 13px; } .guide { display: none; } }
   </style>
 </head>
 <body>
-  <main class="stage" aria-label="VoiceBridge 光标粘贴交互原型">
-    <header><div class="brand"><b>◉</b> VoiceBridge</div><div class="ready"><i></i>等待你的快捷键</div></header>
-    <section class="workspace" aria-hidden="true">
-      <h1>Trae · 当前对话</h1>
-      <p>光标已停在这里<span class="cursor"></span></p>
-      <div class="ghost-chat"><div class="ghost-line"></div><div class="ghost-line short"></div><div class="ghost-line"></div></div>
+  <main class="stage" aria-label="VoiceBridge 光标浮层交互原型">
+    <div class="appbar"><div class="traffic"><i></i><i></i><i></i></div><span class="appname">Trae · am-ai-portfolio-main</span><div class="live-indicator"><i></i>VoiceBridge 已就绪</div></div>
+    <section class="ide" aria-hidden="true">
+      <div class="code"><div class="file">src / schema / schema.py</div><h2>class UserInput(BaseModel):</h2><div class="code-line wide"></div><div class="code-line indent"></div><div class="code-line medium"></div><div class="code-line indent"></div><div class="code-line short"></div><div class="code-line wide"></div><div class="code-line medium"></div></div>
+      <div class="chat"><header><span>TRAE</span><span>⌕　⋯</span></header><div class="conversation"><div class="message">请帮我分析当前服务的会话恢复逻辑。</div><div class="message me">我想确认没有 thread_id 时的行为。</div><div class="message">我会从入口、会话创建和 checkpoint 三个部分检查。</div></div></div>
+      <div class="composer"><div class="composer-label">向当前对话提问</div><span class="caret"></span></div>
     </section>
-    <section class="bubble" id="bubble" aria-label="识别文字确认框">
-      <div class="bubble-head"><div class="bubble-title"><span class="mic">⌁</span>刚刚识别到的文字</div><span class="hint">可以直接修改</span></div>
-      <textarea id="text" autofocus>请检查 Router 的条件分支：当请求没有 thread_id 时，是否会错误恢复上一次 LangGraph checkpoint？只分析问题和建议，不要修改代码。</textarea>
-      <div class="footer"><div class="keys"><kbd>Enter</kbd> 粘贴到光标处　<kbd>Shift</kbd> + <kbd>Enter</kbd> 换行</div><button class="primary" id="paste">粘贴到光标处 ↵</button></div>
+    <div class="anchor" aria-label="原光标位置"></div>
+    <div class="guide">演示：<b>点击下方状态</b>，看浮层如何跟着光标工作</div>
+
+    <section class="overlay" id="recording" aria-live="polite">
+      <div class="recording"><span class="state-icon"><span class="pulse"></span></span><div class="state-text"><strong>正在听你说话</strong><span>声音正在采集 · 按 Enter 结束</span></div><div class="sound"><i></i><i></i><i></i><i></i><i></i></div></div>
     </section>
-    <section class="sent" id="sent" aria-live="polite">
-      <strong>已粘贴到原来的光标处</strong>
-      <p>没有自动按回车，也没有自动发送。你可以继续编辑后自行提交。</p>
-      <button id="again">模拟下一次语音识别</button>
+    <section class="overlay hidden" id="transcribing" aria-live="polite">
+      <div class="transcribing"><span class="state-icon"><span class="spinner"></span></span><div class="state-text"><strong>正在识别并整理</strong><span id="progress">本地识别完成，正在优化表达…</span></div></div>
     </section>
-    <div class="corner-note">Esc 取消本次粘贴</div>
+    <section class="overlay hidden" id="result" aria-label="可编辑的识别结果">
+      <div class="result"><div class="result-top"><span class="spark">✦</span><strong>识别结果</strong><span>可直接编辑</span></div><textarea id="text" aria-label="识别结果">请检查 Router 的条件分支：当请求没有 thread_id 时，是否会错误恢复上一次 LangGraph checkpoint？只分析问题和建议，不要修改代码。</textarea><div class="result-footer"><span class="keys"><kbd>Enter</kbd> 粘贴　<kbd>Shift</kbd> + <kbd>Enter</kbd> 换行</span><button class="paste" id="paste">粘贴 ↵</button></div></div>
+    </section>
+    <section class="overlay hidden" id="done" aria-live="polite"><div class="toast"><b>✓</b><div>已粘贴到光标处<br><span>未自动提交，你仍可修改后再发送。</span></div></div></section>
+    <nav class="controls" aria-label="原型状态切换"><button data-state="recording" class="active">1 · 录音中</button><button data-state="transcribing">2 · 识别中</button><button data-state="result">3 · 编辑结果</button><button data-state="done">4 · 已粘贴</button></nav>
   </main>
   <script>
-    const bubble = document.getElementById('bubble');
-    const sent = document.getElementById('sent');
+    const states = ['recording', 'transcribing', 'result', 'done'];
     const text = document.getElementById('text');
-    function pasteAtCursor() {
-      if (!text.value.trim()) { text.focus(); return; }
-      bubble.classList.add('dismissed');
-      sent.classList.add('show');
+    function setState(name) {
+      states.forEach((state) => document.getElementById(state).classList.toggle('hidden', state !== name));
+      document.querySelectorAll('[data-state]').forEach((button) => button.classList.toggle('active', button.dataset.state === name));
+      if (name === 'result') setTimeout(() => text.focus(), 160);
     }
-    document.getElementById('paste').addEventListener('click', pasteAtCursor);
-    text.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); pasteAtCursor(); }
-      if (event.key === 'Escape') { bubble.classList.add('dismissed'); }
-    });
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') { bubble.classList.add('dismissed'); }
-    });
-    document.getElementById('again').addEventListener('click', () => {
-      sent.classList.remove('show');
-      bubble.classList.remove('dismissed');
-      text.focus();
-    });
+    document.querySelectorAll('[data-state]').forEach((button) => button.addEventListener('click', () => setState(button.dataset.state)));
+    function confirmPaste() { if (text.value.trim()) setState('done'); else text.focus(); }
+    document.getElementById('paste').addEventListener('click', confirmPaste);
+    text.addEventListener('keydown', (event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); confirmPaste(); } });
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') setState('done'); });
   </script>
 </body>
 </html>
