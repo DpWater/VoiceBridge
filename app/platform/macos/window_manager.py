@@ -21,8 +21,9 @@ class MacOSWindowManager:
     )
     _paste_script = 'tell application "System Events" to keystroke "v" using command down'
 
-    def __init__(self, runner=subprocess.run) -> None:
+    def __init__(self, runner=subprocess.run, cursor_position=None) -> None:
         self._runner = runner
+        self._cursor_position = cursor_position or self._read_cursor_position
 
     @staticmethod
     def is_supported() -> bool:
@@ -38,7 +39,19 @@ class MacOSWindowManager:
             check=False,
         )
         app_name = result.stdout.strip() if result.returncode == 0 else ""
-        return TargetSnapshot(application_name=app_name or None)
+        cursor_x, cursor_y = self._cursor_position()
+        return TargetSnapshot(application_name=app_name or None, cursor_x=cursor_x, cursor_y=cursor_y)
+
+    @staticmethod
+    def _read_cursor_position() -> tuple[int | None, int | None]:
+        """Read the pointer location without inspecting the target application's UI."""
+        try:
+            from Quartz import CGEventCreate, CGEventGetLocation
+
+            point = CGEventGetLocation(CGEventCreate(None))
+            return round(point.x), round(point.y)
+        except Exception:  # noqa: BLE001 - cursor anchoring is an optional visual enhancement.
+            return None, None
 
     def activate(self, target: TargetSnapshot) -> bool:
         if not self.is_supported() or not target.application_name:

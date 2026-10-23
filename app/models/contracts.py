@@ -54,6 +54,8 @@ class DispatchResult:
 class TargetSnapshot:
     application_name: str | None = None
     process_id: int | None = None
+    cursor_x: int | None = None
+    cursor_y: int | None = None
 
 
 @dataclass(frozen=True)

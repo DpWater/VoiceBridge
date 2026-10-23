@@ -199,7 +199,7 @@ class MainWindow(QMainWindow):
                 self.controller.workflow.start(); self.recorder.start()
                 self.record_button.setText("停止并识别")
                 self.status.setText("正在录音…按 Enter 结束并开始识别。")
-                self.floating.show_recording()
+                self.floating.show_recording(self.target_snapshot)
             except Exception as exc:
                 self._error(str(exc))
         elif self.controller.workflow.state is WorkflowState.RECORDING:
@@ -207,7 +207,7 @@ class MainWindow(QMainWindow):
                 audio = self.recorder.stop(); self.record_button.setEnabled(False)
                 preparing = "正在识别并由 DeepSeek 整理…" if self.settings.use_enhancement else "正在识别语音…"
                 self.status.setText(preparing)
-                self.floating.show_status("正在识别…")
+                self.floating.show_status(preparing, self.target_snapshot)
                 self.controller.process(audio, self.settings.terminology,
                                         lambda raw, revised: self.signals.review_ready.emit(raw, revised),
                                         lambda message: self.signals.failed.emit(message), self.settings.use_enhancement)
@@ -217,13 +217,14 @@ class MainWindow(QMainWindow):
     def _review(self, original: str, revised: str) -> None:
         self.floating.hide(); self.status.setText("已识别。可修改文字后按 Enter 粘贴到原光标处。")
         target = self._active_cursor_target()
-        dialog = PasteBubbleDialog(revised, self.target_snapshot.application_name, self)
+        dialog = PasteBubbleDialog(revised, self.target_snapshot, self)
         if dialog.exec() and dialog.text:
             try:
                 self.controller.workflow.transition(WorkflowState.DISPATCHING)
                 result = target.dispatch(dialog.text)
                 self.controller.workflow.transition(WorkflowState.COMPLETED)
                 self.status.setText(result.message)
+                self.floating.show_confirmation(self.target_snapshot)
             except Exception as exc:
                 self._error(str(exc)); return
         else:

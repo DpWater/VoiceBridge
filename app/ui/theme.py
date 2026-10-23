@@ -12,6 +12,21 @@ QLabel#sectionTitle { color: #dce7fc; font-weight: 700; font-size: 14px; }
 QLabel#targetName { color: #f4f7ff; font-weight: 700; font-size: 15px; }
 QLabel#capability { background: #1d3150; color: #c7d6f1; border-radius: 9px; padding: 4px 7px; font-size: 11px; }
 QLabel#capabilityActive { background: #153d39; color: #b9ffe8; border-radius: 9px; padding: 4px 7px; font-size: 11px; }
+QFrame#floatingFeedback { background: #142138; border: 1px solid #3b5879; border-radius: 14px; }
+QLabel#feedbackIcon { color: #67f0bd; font-size: 18px; font-weight: 700; }
+QLabel#feedbackTitle { color: #f2f7ff; font-size: 13px; font-weight: 700; }
+QLabel#feedbackElapsed { color: #a8b9d2; font-size: 12px; }
+QLabel#feedbackDetail { color: #9eafca; font-size: 11px; }
+QProgressBar#feedbackProgress { height: 3px; border: 0; border-radius: 1px; background: #20314d; }
+QProgressBar#feedbackProgress::chunk { border-radius: 1px; background: #59e1be; }
+QDialog#pasteBubble { background: transparent; }
+QFrame#pasteBubbleCard { background: #152239; border: 1px solid #50688e; border-radius: 17px; }
+QLabel#pasteBadge { min-width: 22px; min-height: 22px; padding: 1px; border-radius: 7px; color: #241b48; background: #aa95ff; font-size: 14px; font-weight: 700; }
+QLabel#pasteTitle { color: #f1f5ff; font-size: 12px; font-weight: 700; }
+QLabel#pasteEditable { color: #97d9bd; font-size: 11px; }
+QLabel#pasteHint { color: #91a5c4; font-size: 10px; }
+QPushButton#pasteCancel { padding: 6px 9px; border-color: transparent; color: #9fb1cc; background: transparent; }
+QPushButton#pasteCancel:hover { color: #eef5ff; background: #25344e; }
 QPushButton { border: 1px solid #405171; border-radius: 9px; padding: 9px 13px; color: #e3ebfc; background: #18243c; font-weight: 600; }
 QPushButton:hover { background: #223252; border-color: #58709c; }
 QPushButton#primary { border: 0; background: #7051e8; color: white; min-height: 22px; }
