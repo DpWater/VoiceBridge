@@ -11,6 +11,7 @@ from app.ui.theme import APP_STYLE
 def main() -> int:
     application = QApplication(sys.argv)
     application.setApplicationName("VoiceBridge")
+    application.setQuitOnLastWindowClosed(False)
     application.setStyleSheet(APP_STYLE)
     window = MainWindow(); window.resize(500, 180); window.show()
     return application.exec()

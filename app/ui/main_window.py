@@ -5,7 +5,6 @@ import platform
 from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
-    QApplication,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -128,7 +127,8 @@ class MainWindow(QMainWindow):
         content_layout.addStretch()
         layout.addWidget(content)
         self.setCentralWidget(body)
-        self.tray = SystemTray(self, self._show_from_tray, self._start_from_tray, QApplication.quit)
+        self._quitting = False
+        self.tray = SystemTray(self, self._show_from_tray, self._start_from_tray, self._quit_application)
         self.hotkey_backend = None
         self.return_interceptor = None
         if self.settings.hotkey_enabled:
@@ -136,6 +136,10 @@ class MainWindow(QMainWindow):
 
     def _show_from_tray(self) -> None:
         self.showNormal(); self.raise_(); self.activateWindow()
+
+    def _quit_application(self) -> None:
+        self._quitting = True
+        self.close()
 
     def _start_from_tray(self) -> None:
         if self.controller.workflow.state is WorkflowState.IDLE:
@@ -268,6 +272,10 @@ class MainWindow(QMainWindow):
             self.controller.workflow.reset()
 
     def closeEvent(self, event) -> None:
+        if not self._quitting:
+            self.hide()
+            event.ignore()
+            return
         self.recorder.cancel()
         if self.hotkey_backend:
             self.hotkey_backend.stop()
