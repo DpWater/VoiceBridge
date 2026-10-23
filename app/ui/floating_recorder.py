@@ -10,7 +10,13 @@ from app.models.contracts import TargetSnapshot
 class FloatingRecorder(QFrame):
     """Small, non-activating feedback placed next to the captured cursor."""
     def __init__(self) -> None:
-        super().__init__(None, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
+        super().__init__(
+            None,
+            Qt.WindowType.ToolTip
+            | Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.WindowDoesNotAcceptFocus,
+        )
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self.setObjectName("floatingFeedback")
         self.setFixedWidth(350)
@@ -46,12 +52,14 @@ class FloatingRecorder(QFrame):
         self._show_near(target)
 
     def show_status(self, text: str, target: TargetSnapshot) -> None:
-        self._timer.stop()
+        self._seconds = 0
         self.icon.setText("◌")
         self.label.setText(text)
-        self.detail.setText("请稍等，完成后会在原光标旁显示可编辑结果")
-        self.elapsed.hide()
+        self.detail.setText("本地语音识别完成后，将由 DeepSeek 整理表达")
+        self.elapsed.setText("00:00")
+        self.elapsed.show()
         self.level.show()
+        self._timer.start(1000)
         self._show_near(target)
 
     def show_confirmation(self, target: TargetSnapshot) -> None:
@@ -78,6 +86,7 @@ class FloatingRecorder(QFrame):
                 y = min(point.y() + 18, bounds.bottom() - self.height() - 10)
             self.move(x, y)
         self.show()
+        self.raise_()
 
     @staticmethod
     def _anchor(target: TargetSnapshot):
